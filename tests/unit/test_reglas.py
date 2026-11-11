@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from src.notas.reglas import calcular_definitiva, clasificar_nota
@@ -30,11 +32,18 @@ def test_clasificar_nota_fronteras(nota, esperado):
 
 
 @pytest.mark.parametrize(
-    "entrada, excepcion",
-    [(-0.1, ValueError), (5.1, ValueError), ("3.0", TypeError), (None, TypeError), (True, TypeError)],
+    "entrada, excepcion, mensaje",
+    [
+        (-0.1, ValueError, "La nota debe estar entre 0.0 y 5.0."),
+        (5.1, ValueError, "La nota debe estar entre 0.0 y 5.0."),
+        ("3.0", TypeError, "La nota debe ser numérica."),
+        (None, TypeError, "La nota debe ser numérica."),
+        (True, TypeError, "La nota debe ser numérica."),
+    ],
 )
-def test_clasificar_nota_entradas_destructivas(entrada, excepcion):
-    with pytest.raises(excepcion):
+def test_clasificar_nota_entradas_destructivas(entrada, excepcion, mensaje):
+    # match= con ^...$ verifica el mensaje COMPLETO: lo exige la prueba de mutación (Frente 1)
+    with pytest.raises(excepcion, match=f"^{re.escape(mensaje)}$"):
         clasificar_nota(entrada)
 
 
