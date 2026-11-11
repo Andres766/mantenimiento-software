@@ -1,0 +1,58 @@
+name: CD NotasQA
+on:
+  workflow_run:
+    workflows: ["CI NotasQA"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write         # publicar la imagen en GitHub Container Registry
+
+jobs:
+  desplegar:                    # Semana 9: Staging -> smoke test -> promoción o rollback
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.11"
+      - run: python -m pip install -r requirements.txt
+      - name: Nombre de la imagen (GHCR exige minúsculas)
+        run: echo "IMAGEN=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+      - name: Construir artefacto inmutable
+        run: docker build --build-arg APP_VERSION="$VERSION" -t "$IMAGEN:$VERSION" .
+      - name: Levantar Staging
+        env:
+          FORZAR_FALLO: ${{ vars.FORZAR_FALLO }}
+        run: |
+          docker run -d --name staging -p 8001:8000 -e FORZAR_FALLO="$FORZAR_FALLO" "$IMAGEN:$VERSION"
+          for _ in $(seq 1 20); do
+            [ "$(docker inspect -f '{{.State.Health.Status}}' staging)" != "starting" ] && break
+            sleep 2
+          done
+      - name: Smoke test + decisión (deploy.py)
+        env:
+          STAGING_URL: http://localhost:8001
+          APP_VERSION: ${{ env.VERSION }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python scripts/deploy.py
+      - name: Promover a producción (etiqueta stable)
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+          docker tag "$IMAGEN:$VERSION" "$IMAGEN:stable"
+          docker push "$IMAGEN:$VERSION"
+          docker push "$IMAGEN:stable"
+      # Si deploy.py sale con código 1 el paso anterior nunca corre: "stable" sigue
+      # apuntando a la última versión buena (rollback) y Telegram ya avisó.
+      - if: always()
+        run: docker logs staging || true
