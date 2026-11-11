@@ -6,9 +6,10 @@ import boto3
 
 BUCKET = os.getenv("BUCKET_BOLETINES", "notasqa-boletines")
 COLA = os.getenv("COLA_EVENTOS", "notasqa-eventos")
+COLA_DLQ = os.getenv("COLA_EVENTOS_DLQ", "notasqa-eventos-dlq")
 
 
-def _cliente(servicio: str):
+def cliente(servicio: str):
     return boto3.client(
         servicio,
         endpoint_url=os.getenv("AWS_ENDPOINT_URL"),  # http://localstack:4566 en Docker
@@ -18,14 +19,21 @@ def _cliente(servicio: str):
     )
 
 
+def url_cola(nombre: str = COLA) -> str:
+    return cliente("sqs").get_queue_url(QueueName=nombre)["QueueUrl"]
+
+
 def publicar_boletin(calificacion: dict) -> str:
     """Guarda el boletín en S3 y emite un evento en SQS. Devuelve la llave S3."""
     llave = f"boletines/{calificacion['estudiante_id']}/{calificacion['id']}.json"
-    _cliente("s3").put_object(
+    cliente("s3").put_object(
         Bucket=BUCKET, Key=llave, Body=json.dumps(calificacion).encode("utf-8"),
         ContentType="application/json",
     )
-    sqs = _cliente("sqs")
-    url = sqs.get_queue_url(QueueName=COLA)["QueueUrl"]
-    sqs.send_message(QueueUrl=url, MessageBody=json.dumps({"evento": "boletin_generado", "s3_key": llave}))
+    cliente("sqs").send_message(QueueUrl=url_cola(),
+                                MessageBody=json.dumps({"evento": "boletin_generado", "s3_key": llave}))
     return llave
+
+
+def leer_boletin(llave: str) -> dict:
+    return json.loads(cliente("s3").get_object(Bucket=BUCKET, Key=llave)["Body"].read())
