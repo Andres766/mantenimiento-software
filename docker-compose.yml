@@ -1,46 +1,87 @@
+# Entorno local completo de NotasQA.
+# Las claves por defecto (${VAR:-valor}) son SOLO para desarrollo local; en CI/CD vienen de GitHub Secrets.
+# Puedes sobrescribirlas creando un archivo .env (ver .env.example).
+x-aws: &aws
+  AWS_ENDPOINT_URL: http://localstack:4566
+  AWS_DEFAULT_REGION: us-east-1
+  AWS_ACCESS_KEY_ID: test
+  AWS_SECRET_ACCESS_KEY: test
+
+x-app: &app
+  <<: *aws
+  DATABASE_URL: postgresql+psycopg://notasqa:${POSTGRES_PASSWORD:-notasqa-local}@db:5432/notasqa
+  JWT_SECRET: ${JWT_SECRET:-desarrollo-local-cambiar-en-produccion-0123456789}
+  DOCENTE_CLAVE: ${DOCENTE_CLAVE:-docente-local}
+  ESTUDIANTE_CLAVE: ${ESTUDIANTE_CLAVE:-estudiante-local}
+  ESTUDIANTE_ID: "1001"
+
 services:
+  db:                               # Frente 1: persistencia real
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: notasqa
+      POSTGRES_USER: notasqa
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-notasqa-local}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notasqa -d notasqa"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
   localstack:                       # Semana 10: nube AWS emulada (S3 + SQS)
     image: localstack/localstack:3.8.1   # versión fija: "latest" exige token desde marzo 2026
     ports: ["4566:4566"]
     environment:
-      - SERVICES=s3,sqs
-      - AWS_DEFAULT_REGION=us-east-1
+      SERVICES: s3,sqs
+      AWS_DEFAULT_REGION: us-east-1
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
       interval: 5s
       timeout: 3s
       retries: 10
 
-  infra-init:                       # IaC: crea bucket y cola, luego termina
+  infra-init:                       # IaC: bucket + cola + DLQ, luego termina
     build: .
     command: ["python", "-m", "infra.init_infra"]
-    environment: &aws
-      - AWS_ENDPOINT_URL=http://localstack:4566
-      - AWS_DEFAULT_REGION=us-east-1
-      - AWS_ACCESS_KEY_ID=test
-      - AWS_SECRET_ACCESS_KEY=test
+    environment: *aws
     depends_on:
       localstack: { condition: service_healthy }
 
-  api:                              # Semanas 4-5: servicio bajo prueba
+  api:                              # Servicio bajo prueba (API + interfaz en /ui)
     build: .
     container_name: notasqa_api
     ports: ["8000:8000"]
-    environment: *aws
+    environment: *app
+    depends_on:
+      db: { condition: service_healthy }
+      infra-init: { condition: service_completed_successfully }
+
+  notificador:                      # Frente 3: worker que consume SQS
+    build: .
+    command: ["python", "-m", "src.worker.notificador"]
+    environment:
+      <<: *aws
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
     depends_on:
       infra-init: { condition: service_completed_successfully }
 
   test-runner:                      # Semana 5: ejecutor efímero de pruebas de API
     build: { context: ., dockerfile: Dockerfile.tests }
     environment:
-      - API_URL=http://api:8000
+      API_URL: http://api:8000
+      DOCENTE_CLAVE: ${DOCENTE_CLAVE:-docente-local}
+      ESTUDIANTE_CLAVE: ${ESTUDIANTE_CLAVE:-estudiante-local}
+      ESTUDIANTE_ID: "1001"
     depends_on:
       api: { condition: service_healthy }
 
-  prometheus:                       # Semanas 11-12: recolecta /metrics de la API
+  prometheus:                       # Semanas 11-12: métricas + reglas de alerta
     image: prom/prometheus:v3.5.0
     profiles: ["observabilidad"]
-    volumes: ["./observabilidad/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
+    volumes:
+      - ./observabilidad/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observabilidad/alertas.yml:/etc/prometheus/alertas.yml:ro
     ports: ["9090:9090"]
     depends_on: [api]
 
@@ -49,8 +90,8 @@ services:
     profiles: ["observabilidad"]
     ports: ["3000:3000"]
     environment:
-      - GF_AUTH_ANONYMOUS_ENABLED=true     # solo para la demo local
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      GF_AUTH_ANONYMOUS_ENABLED: "true"     # solo para la demo local
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
     volumes:
       - ./observabilidad/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./observabilidad/grafana/dashboards:/var/lib/grafana/dashboards:ro

@@ -1,7 +1,12 @@
 .git
 .github
+.env
 __pycache__
 .pytest_cache
 htmlcov
 coverage.xml
+test-results
+mutants
+.mutmut-cache
+*.db
 *.csv

@@ -1,0 +1,45 @@
+name: Rollback manual NotasQA
+# Frente 3: volver producción a una versión anterior conocida en segundos (reduce el MTTR).
+# Actions -> "Rollback manual NotasQA" -> Run workflow -> pegar el SHA de una versión buena.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "SHA completo del commit al que se quiere volver (debe existir imagen:SHA en GHCR)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment: production          # misma aprobación que un despliegue normal
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - run: python3 -m pip install requests
+      - name: Validar el SHA
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          [[ "$VERSION" =~ ^[0-9a-f]{40}$ ]] || { echo "Debe ser un SHA completo de 40 caracteres"; exit 1; }
+      - name: Repuntar imagen:stable
+        env:
+          VERSION: ${{ inputs.version }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          IMAGEN="ghcr.io/${GITHUB_REPOSITORY,,}"
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+          docker pull "$IMAGEN:$VERSION"
+          docker tag "$IMAGEN:$VERSION" "$IMAGEN:stable"
+          docker push "$IMAGEN:stable"
+      - name: Notificar
+        env:
+          VERSION: ${{ inputs.version }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python3 scripts/deploy.py --notificar "ROLLBACK MANUAL: producción vuelve a NotasQA ${VERSION:0:7}"
