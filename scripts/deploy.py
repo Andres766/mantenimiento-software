@@ -1,18 +1,23 @@
-"""CD: smoke test en Staging -> promoción o rollback + alerta en Telegram (semana 9)."""
+"""CD (semana 9): smoke test en Staging -> listo para producción o rollback + alertas en Telegram.
+
+Uso:
+  python scripts/deploy.py                      # smoke test contra STAGING_URL
+  python scripts/deploy.py --notificar "texto"  # solo enviar un mensaje (lo usan los jobs de CD)
+"""
 import os
 import sys
 
 import requests
 
 STAGING_URL = os.getenv("STAGING_URL", "http://localhost:8001")
-VERSION = os.getenv("APP_VERSION", "dev")
+VERSION = os.getenv("APP_VERSION", "dev")[:7]
 
 
 def notificar_telegram(mensaje: str) -> None:
     token = os.getenv("TELEGRAM_BOT_TOKEN")  # siempre desde GitHub Secrets, nunca en el código
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
     if not token or not chat_id:
-        print("(Telegram no configurado, se omite la notificación)")
+        print(f"(Telegram no configurado) {mensaje}")
         return
     try:
         requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
@@ -22,25 +27,32 @@ def notificar_telegram(mensaje: str) -> None:
 
 
 def smoke_test(base_url: str) -> bool:
+    """Rutas públicas: salud del servicio, interfaz web y rechazo correcto sin token."""
     try:
         salud = requests.get(f"{base_url}/health", timeout=3)
-        lista = requests.get(f"{base_url}/api/v1/calificaciones", timeout=3)
+        interfaz = requests.get(f"{base_url}/ui/", timeout=3)
+        protegida = requests.get(f"{base_url}/api/v1/calificaciones", timeout=3)
     except requests.RequestException as error:
         print(f"[ERROR DE CONEXIÓN] {error}")
         return False
-    return salud.status_code == 200 and lista.status_code == 200
+    print(f"  /health={salud.status_code}  /ui/={interfaz.status_code}  "
+          f"/api/v1/calificaciones sin token={protegida.status_code} (se espera 401)")
+    return salud.status_code == 200 and interfaz.status_code == 200 and protegida.status_code == 401
 
 
-def main() -> int:
-    print(f"=== CD NotasQA v{VERSION} === Smoke test en {STAGING_URL}")
+def main(argv: list[str]) -> int:
+    if len(argv) == 2 and argv[0] == "--notificar":
+        notificar_telegram(argv[1])
+        return 0
+    print(f"=== CD NotasQA {VERSION} === Smoke test en {STAGING_URL}")
     if smoke_test(STAGING_URL):
-        print("[OK] Staging sano -> PROMOVER a producción")
-        notificar_telegram(f"DESPLIEGUE EXITOSO: NotasQA v{VERSION} en producción")
+        print("[OK] Staging sano -> la versión queda lista para aprobación a producción")
+        notificar_telegram(f"STAGING OK: NotasQA {VERSION} espera aprobación para producción")
         return 0
     print("[FALLO] Staging no sano -> ROLLBACK: producción se queda en la versión estable")
-    notificar_telegram(f"ROLLBACK AUTOMÁTICO: NotasQA v{VERSION} falló en Staging")
+    notificar_telegram(f"ROLLBACK AUTOMÁTICO: NotasQA {VERSION} falló en Staging")
     return 1
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

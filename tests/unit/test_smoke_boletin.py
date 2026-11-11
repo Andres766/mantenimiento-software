@@ -17,21 +17,38 @@ class RespuestaFalsa(io.BytesIO):
         return False
 
 
-def _servidor(respuestas):
+LOGIN_OK = {"access_token": "abc", "rol": "docente"}
+
+
+def _servidor(respuestas, vistas=None):
     cola = list(respuestas)
-    return lambda peticion, timeout: cola.pop(0)
+
+    def urlopen(peticion, timeout):
+        if vistas is not None:
+            vistas.append(peticion)
+        return cola.pop(0)
+    return urlopen
 
 
-def test_flujo_completo_exitoso(monkeypatch):
+def test_flujo_completo_exitoso_envia_token(monkeypatch):
+    vistas = []
     monkeypatch.setattr(smoke_boletin.urllib.request, "urlopen", _servidor([
+        RespuestaFalsa(200, LOGIN_OK),
         RespuestaFalsa(201, {"id": 1, "definitiva": 4.6, "estado": "EXCELENTE"}),
         RespuestaFalsa(201, {"s3_key": "boletines/2026/1.json"}),
-    ]))
+    ], vistas))
     assert smoke_boletin.main("http://api") == 0
+    assert vistas[1].get_header("Authorization") == "Bearer abc"
+
+
+def test_login_fallido(monkeypatch):
+    monkeypatch.setattr(smoke_boletin.urllib.request, "urlopen", _servidor([RespuestaFalsa(200, {})]))
+    assert smoke_boletin.main("http://api") == 1
 
 
 def test_estado_incorrecto_falla(monkeypatch):
     monkeypatch.setattr(smoke_boletin.urllib.request, "urlopen", _servidor([
+        RespuestaFalsa(200, LOGIN_OK),
         RespuestaFalsa(201, {"id": 1, "definitiva": 4.5, "estado": "APROBADO"}),
     ]))
     assert smoke_boletin.main("http://api") == 1
@@ -39,6 +56,7 @@ def test_estado_incorrecto_falla(monkeypatch):
 
 def test_boletin_sin_llave_falla(monkeypatch):
     monkeypatch.setattr(smoke_boletin.urllib.request, "urlopen", _servidor([
+        RespuestaFalsa(200, LOGIN_OK),
         RespuestaFalsa(201, {"id": 1, "definitiva": 4.6, "estado": "EXCELENTE"}),
         RespuestaFalsa(201, {}),
     ]))

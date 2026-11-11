@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NotasQA</title>
+  <style>
+    :root { --tinta: #1d2433; --suave: #5b6476; --borde: #d6dae3; --acento: #1f5fbf; --ok: #1e7a46; --mal: #b3261e; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--tinta); background: #f6f7f9; }
+    header { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; background: #fff; border-bottom: 1px solid var(--borde); }
+    header h1 { margin: 0; font-size: 18px; }
+    main { max-width: 920px; margin: 24px auto; padding: 0 16px; display: grid; gap: 16px; }
+    section { background: #fff; border: 1px solid var(--borde); border-radius: 10px; padding: 18px 20px; }
+    h2 { margin: 0 0 12px; font-size: 16px; }
+    form { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px 12px; align-items: end; }
+    label { display: grid; gap: 4px; font-size: 13px; color: var(--suave); }
+    input { width: 100%; min-width: 0; font: inherit; padding: 7px 9px; border: 1px solid var(--borde); border-radius: 6px; color: var(--tinta); }
+    button { font: inherit; padding: 8px 14px; border: 0; border-radius: 6px; background: var(--acento); color: #fff; cursor: pointer; }
+    button.secundario { background: transparent; color: var(--acento); border: 1px solid var(--acento); }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--borde); }
+    th { color: var(--suave); font-weight: 600; }
+    td.num { font-variant-numeric: tabular-nums; }
+    .EXCELENTE { color: var(--ok); font-weight: 600; } .REPROBADO { color: var(--mal); font-weight: 600; }
+    #mensaje:empty { display: none; }
+    #mensaje { padding: 10px 14px; border-radius: 6px; background: #eef3fb; }
+    #mensaje.error { background: #fbeeee; color: var(--mal); }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>NotasQA</h1>
+    <div><span id="quien"></span> <button id="salir" class="secundario" hidden>Salir</button></div>
+  </header>
+  <main>
+    <p id="mensaje" role="status" aria-live="polite"></p>
+
+    <section id="panel-login">
+      <h2>Ingresar</h2>
+      <form id="form-login">
+        <label>Usuario <input name="usuario" autocomplete="username" required></label>
+        <label>Clave <input name="clave" type="password" autocomplete="current-password" required></label>
+        <button type="submit">Ingresar</button>
+      </form>
+    </section>
+
+    <section id="panel-registro" hidden>
+      <h2>Registrar nota</h2>
+      <form id="form-nota">
+        <label>Estudiante <input name="estudiante_id" type="number" min="1" required></label>
+        <label>Asignatura <input name="asignatura" required></label>
+        <label>Corte 1 <input name="corte1" type="number" step="0.1" required></label>
+        <label>Corte 2 <input name="corte2" type="number" step="0.1" required></label>
+        <label>Corte 3 <input name="corte3" type="number" step="0.1" required></label>
+        <label>Créditos <input name="creditos" type="number" value="3" required></label>
+        <button type="submit">Registrar nota</button>
+      </form>
+    </section>
+
+    <section id="panel-notas" hidden>
+      <h2 id="titulo-notas">Calificaciones</h2>
+      <table aria-labelledby="titulo-notas">
+        <thead><tr><th>#</th><th>Estudiante</th><th>Asignatura</th><th>Créditos</th><th>Definitiva</th><th>Estado</th></tr></thead>
+        <tbody id="tabla-notas"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    const API = "/api/v1";
+    let sesion = null;   // en memoria: se pierde al recargar (no se guarda el token en el navegador)
+    const $ = (id) => document.getElementById(id);
+
+    function mostrar(texto, esError = false) {
+      $("mensaje").textContent = texto;
+      $("mensaje").className = esError ? "error" : "";
+    }
+
+    async function llamar(ruta, opciones = {}) {
+      const respuesta = await fetch(API + ruta, {
+        ...opciones,
+        headers: { "Content-Type": "application/json", ...(sesion ? { Authorization: "Bearer " + sesion.token } : {}) },
+      });
+      const cuerpo = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok) throw new Error(cuerpo.detail ? String(cuerpo.detail) : "Error " + respuesta.status);
+      return cuerpo;
+    }
+
+    function pintarTabla(notas) {
+      const tbody = $("tabla-notas");
+      tbody.replaceChildren();
+      for (const n of notas) {
+        const fila = document.createElement("tr");
+        for (const [valor, clase] of [[n.id, "num"], [n.estudiante_id, "num"], [n.asignatura, ""],
+                                      [n.creditos, "num"], [n.definitiva.toFixed(1), "num"], [n.estado, n.estado]]) {
+          const celda = document.createElement("td");
+          celda.textContent = valor;        // textContent: nunca se interpreta como HTML (sin XSS)
+          if (clase) celda.className = clase;
+          fila.append(celda);
+        }
+        tbody.append(fila);
+      }
+    }
+
+    async function refrescar() {
+      pintarTabla(await llamar("/calificaciones"));
+    }
+
+    function entrarComo(datos) {
+      sesion = { token: datos.access_token, rol: datos.rol };
+      $("quien").textContent = datos.rol === "docente" ? "Docente" : "Estudiante " + datos.estudiante_id;
+      $("panel-login").hidden = true;
+      $("salir").hidden = false;
+      $("panel-notas").hidden = false;
+      $("panel-registro").hidden = datos.rol !== "docente";
+    }
+
+    $("form-login").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const f = new FormData(e.target);
+      try {
+        entrarComo(await llamar("/auth/token", { method: "POST",
+          body: JSON.stringify({ usuario: f.get("usuario"), clave: f.get("clave") }) }));
+        mostrar("");
+        await refrescar();
+      } catch (error) { mostrar(error.message, true); }
+    });
+
+    $("form-nota").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const f = new FormData(e.target);
+      const cuerpo = { estudiante_id: Number(f.get("estudiante_id")), asignatura: f.get("asignatura"),
+        corte1: Number(f.get("corte1")), corte2: Number(f.get("corte2")), corte3: Number(f.get("corte3")),
+        creditos: Number(f.get("creditos")) };
+      try {
+        const nota = await llamar("/calificaciones", { method: "POST", body: JSON.stringify(cuerpo) });
+        mostrar(`Nota registrada: ${nota.definitiva.toFixed(1)} ${nota.estado}`);
+        e.target.reset();
+        await refrescar();
+      } catch (error) { mostrar(error.message, true); }
+    });
+
+    $("salir").addEventListener("click", () => {
+      sesion = null;
+      $("quien").textContent = "";
+      $("salir").hidden = true;
+      $("panel-login").hidden = false;
+      $("panel-registro").hidden = true;
+      $("panel-notas").hidden = true;
+      $("tabla-notas").replaceChildren();
+      mostrar("Sesión cerrada");
+    });
+  </script>
+</body>
+</html>
