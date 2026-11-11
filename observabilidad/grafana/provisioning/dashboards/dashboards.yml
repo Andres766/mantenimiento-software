@@ -1,0 +1,7 @@
+apiVersion: 1
+providers:
+  - name: notasqa
+    folder: NotasQA
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards
