@@ -1,0 +1,37 @@
+# Frente 4: reglas de alerta de Prometheus (se ven en http://localhost:9090/alerts)
+groups:
+  - name: notasqa
+    rules:
+      - alert: LatenciaP95Alta
+        expr: histogram_quantile(0.95, sum by (le) (rate(notasqa_http_request_seconds_bucket[1m]))) > 0.5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "p95 de NotasQA por encima de 500 ms"
+          description: "El mismo umbral del quality gate de Locust se superó durante 1 minuto."
+
+      - alert: ErroresServidor
+        expr: sum(rate(notasqa_http_requests_total{estado=~"5.."}[1m])) > 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "NotasQA está respondiendo errores 5xx"
+          description: "Revisar /health y los logs JSON: docker compose logs api"
+
+      - alert: ApiCaida
+        expr: up{job="notasqa"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Prometheus no puede leer /metrics de la API"
+
+      - alert: AccesosNoAutorizados
+        expr: sum(rate(notasqa_http_requests_total{estado=~"401|403"}[5m])) > 1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Más de 1 acceso rechazado por segundo (posible fuerza bruta)"
