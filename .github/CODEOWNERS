@@ -1,0 +1,16 @@
+# Dueños por frente: GitHub pide su revisión automáticamente en los PR que tocan sus carpetas.
+# Reemplacen cada usuario-integrante-N por el usuario real de GitHub (con @) y quiten el "#".
+# *                         usuario-integrante-1 usuario-integrante-2 usuario-integrante-3 usuario-integrante-4
+# /src/notas/               usuario-integrante-1
+# /src/app/db.py            usuario-integrante-1
+# /src/app/main.py          usuario-integrante-2
+# /src/app/seguridad.py     usuario-integrante-2
+# /tests/api/               usuario-integrante-2
+# /infra/                   usuario-integrante-3
+# /src/worker/              usuario-integrante-3
+# /.github/workflows/       usuario-integrante-3
+# /docker-compose.yml       usuario-integrante-3
+# /src/app/static/          usuario-integrante-4
+# /tests/e2e/               usuario-integrante-4
+# /load/                    usuario-integrante-4
+# /observabilidad/          usuario-integrante-4
