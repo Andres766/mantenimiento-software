@@ -1,0 +1,57 @@
+services:
+  localstack:                       # Semana 10: nube AWS emulada (S3 + SQS)
+    image: localstack/localstack:3.8.1   # versión fija: "latest" exige token desde marzo 2026
+    ports: ["4566:4566"]
+    environment:
+      - SERVICES=s3,sqs
+      - AWS_DEFAULT_REGION=us-east-1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  infra-init:                       # IaC: crea bucket y cola, luego termina
+    build: .
+    command: ["python", "-m", "infra.init_infra"]
+    environment: &aws
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+    depends_on:
+      localstack: { condition: service_healthy }
+
+  api:                              # Semanas 4-5: servicio bajo prueba
+    build: .
+    container_name: notasqa_api
+    ports: ["8000:8000"]
+    environment: *aws
+    depends_on:
+      infra-init: { condition: service_completed_successfully }
+
+  test-runner:                      # Semana 5: ejecutor efímero de pruebas de API
+    build: { context: ., dockerfile: Dockerfile.tests }
+    environment:
+      - API_URL=http://api:8000
+    depends_on:
+      api: { condition: service_healthy }
+
+  prometheus:                       # Semanas 11-12: recolecta /metrics de la API
+    image: prom/prometheus:v3.5.0
+    profiles: ["observabilidad"]
+    volumes: ["./observabilidad/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
+    ports: ["9090:9090"]
+    depends_on: [api]
+
+  grafana:                          # tablero ya provisionado: RPS, p95, 5xx, códigos
+    image: grafana/grafana:12.1.0
+    profiles: ["observabilidad"]
+    ports: ["3000:3000"]
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true     # solo para la demo local
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    volumes:
+      - ./observabilidad/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observabilidad/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on: [prometheus]
