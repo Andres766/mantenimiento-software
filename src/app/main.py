@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from botocore.exceptions import BotoCoreError, ClientError
-from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
@@ -127,8 +127,10 @@ def crear_calificacion(datos: CalificacionIn, db: Session = Depends(get_db),
 
 
 @app.get("/api/v1/calificaciones")
-def listar_calificaciones(db: Session = Depends(get_db), usuario: Usuario = Depends(usuario_actual)):
-    consulta = select(Calificacion).order_by(Calificacion.id)
+def listar_calificaciones(db: Session = Depends(get_db), usuario: Usuario = Depends(usuario_actual),
+                          limite: int = Query(100, ge=1, le=500), desde: int = Query(0, ge=0)):
+    # Paginado: sin límite, la respuesta crecía con cada nota y a 200 usuarios saturaba la CPU
+    consulta = select(Calificacion).order_by(Calificacion.id).offset(desde).limit(limite)
     if usuario.rol == "estudiante":
         consulta = consulta.where(Calificacion.estudiante_id == usuario.estudiante_id)
     return [c.a_dict() for c in db.scalars(consulta)]

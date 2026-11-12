@@ -47,6 +47,20 @@ def test_listar_cumple_contrato(client, docente):
         validate(instance=item, schema=CALIFICACION_SCHEMA)
 
 
+def test_listar_esta_paginado(client, docente):
+    for _ in range(3):
+        client.post("/api/v1/calificaciones", json=VALIDA, headers=docente)
+    pagina1 = client.get("/api/v1/calificaciones?limite=2", headers=docente).json()
+    pagina2 = client.get("/api/v1/calificaciones?limite=2&desde=1", headers=docente).json()
+    assert len(pagina1) == 2 and len(pagina2) == 2
+    assert pagina1[1]["id"] == pagina2[0]["id"]              # desde=1 empieza en el segundo
+
+
+def test_limite_fuera_de_rango_422(client, docente):
+    assert client.get("/api/v1/calificaciones?limite=0", headers=docente).status_code == 422
+    assert client.get("/api/v1/calificaciones?limite=501", headers=docente).status_code == 422
+
+
 def test_obtener_por_id_200(client, docente):
     creada = client.post("/api/v1/calificaciones", json=VALIDA, headers=docente).json()
     respuesta = client.get(f"/api/v1/calificaciones/{creada['id']}", headers=docente)

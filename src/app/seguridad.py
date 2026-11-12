@@ -62,6 +62,7 @@ def usuario_actual(credenciales: HTTPAuthorizationCredentials | None = Depends(_
     except jwt.InvalidTokenError as error:
         raise _no_autorizado("Token inválido") from error
     usuario = db.get(Usuario, int(datos["sub"]))
+    db.commit()   # devuelve la conexión al pool mientras la petición espera hilo para el endpoint
     if usuario is None:
         raise _no_autorizado("Usuario no existe")
     return usuario
@@ -75,6 +76,7 @@ def solo_docente(usuario: Usuario = Depends(usuario_actual)) -> Usuario:
 
 def autenticar(db: Session, usuario: str, clave: str) -> Usuario | None:
     encontrado = db.scalar(select(Usuario).where(Usuario.usuario == usuario))
+    db.commit()   # no retener la conexión durante el hash PBKDF2 (~20 ms de CPU)
     if encontrado and verificar_clave(clave, encontrado.clave_hash):
         return encontrado
     return None

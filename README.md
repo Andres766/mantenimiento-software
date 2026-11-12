@@ -91,7 +91,7 @@ docker compose down -v                                     # destruir todo (BD y
 | `POST /api/v1/auth/token` | público | 200 con token · 401 |
 | `GET /health` · `GET /metrics` · `GET /ui/` | público | 200 (`/health` 500 si `FORZAR_FALLO=1`) |
 | `POST /api/v1/calificaciones` | docente | 201 · 400 (nota o créditos fuera de rango) · 401 · 403 |
-| `GET /api/v1/calificaciones` | ambos | 200 (el estudiante solo ve las suyas) |
+| `GET /api/v1/calificaciones?limite=100&desde=0` | ambos | 200, paginado (el estudiante solo ve las suyas) · 422 si `limite` no está entre 1 y 500 |
 | `GET /api/v1/calificaciones/{id}` | ambos | 200 · 403 (ajena) · 404 |
 | `POST /api/v1/calificaciones/{id}/habilitacion` | docente | 200 · 400 · 409 (no habilitable o ya habilitada) |
 | `GET /api/v1/estudiantes/{id}/promedio` | ambos | 200 · 403 (ajeno) · 404 |

@@ -1,7 +1,7 @@
 """Persistencia con SQLAlchemy 2.0: PostgreSQL en Docker/producción, SQLite en pruebas rápidas."""
 import os
 import time
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 
 from sqlalchemy import ForeignKey, String, create_engine
 from sqlalchemy.exc import OperationalError
@@ -51,7 +51,9 @@ def crear_motor(url: str):
         if ":memory:" in url:
             opciones["poolclass"] = StaticPool    # una sola BD en memoria compartida por hilos
         return create_engine(url, **opciones)
-    return create_engine(url, pool_pre_ping=True)
+    # 20 + 30 = 50 conexiones > 40 hilos del threadpool de FastAPI: ningún hilo queda bloqueado
+    # esperando una conexión que otro hilo no puede devolver (con 5 + 10 colapsaba a 200 usuarios)
+    return create_engine(url, pool_pre_ping=True, pool_size=20, max_overflow=30)
 
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./notasqa.db")
@@ -59,7 +61,11 @@ motor = crear_motor(DATABASE_URL)
 SesionLocal = sessionmaker(bind=motor, expire_on_commit=False)
 
 
-def get_db() -> Iterator[Session]:
+async def get_db() -> AsyncIterator[Session]:
+    """async a propósito: FastAPI cierra la sesión en el event loop, sin esperar un hilo libre.
+
+    Con un generador síncrono, bajo carga la conexión quedaba retenida mientras la petición
+    esperaba turno en el threadpool para cerrarla, y el pool se agotaba (QueuePool timeout)."""
     with SesionLocal() as sesion:
         yield sesion
 
