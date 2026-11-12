@@ -76,7 +76,7 @@ pip install "mutmut<3" && mutmut run              # pruebas de mutación de las 
 
 ```bash
 cp .env.example .env                                       # opcional: cambiar claves locales
-docker compose up --build --exit-code-from test-runner     # pruebas de API contra el contenedor
+docker compose run --rm --build test-runner                # pruebas de API contra el contenedor (exit code = pytest)
 docker compose up -d --build --wait api notificador        # dejar el sistema arriba
 python scripts/smoke_boletin.py http://localhost:8000      # login -> nota -> boletín en S3 + evento SQS
 docker compose logs notificador                            # "Boletín listo — estudiante 2026 ..."

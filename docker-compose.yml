@@ -59,6 +59,8 @@ services:
   notificador:                      # Frente 3: worker que consume SQS
     build: .
     command: ["python", "-m", "src.worker.notificador"]
+    healthcheck:
+      disable: true                 # hereda el HEALTHCHECK de la API (/health), pero el worker no expone HTTP
     environment:
       <<: *aws
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}

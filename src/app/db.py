@@ -1,8 +1,10 @@
 """Persistencia con SQLAlchemy 2.0: PostgreSQL en Docker/producción, SQLite en pruebas rápidas."""
 import os
+import time
 from collections.abc import Iterator
 
 from sqlalchemy import ForeignKey, String, create_engine
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -62,9 +64,18 @@ def get_db() -> Iterator[Session]:
         yield sesion
 
 
-def inicializar(semilla) -> None:
-    """Crea las tablas (migración inicial) y siembra usuarios de demostración."""
-    Base.metadata.create_all(motor)
+def inicializar(semilla, intentos: int = 10, espera: float = 1.0) -> None:
+    """Crea las tablas (migración inicial) y siembra usuarios de demostración.
+
+    Reintenta si la BD aún no responde: en compose, el DNS de "db" puede tardar unos segundos."""
+    for intento in range(1, intentos + 1):
+        try:
+            Base.metadata.create_all(motor)
+            break
+        except OperationalError:
+            if intento == intentos:
+                raise
+            time.sleep(espera)
     with SesionLocal() as sesion:
         semilla(sesion)
         sesion.commit()

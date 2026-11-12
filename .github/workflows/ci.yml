@@ -110,7 +110,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - name: Pruebas de API dentro de contenedores
-        run: docker compose up --build --exit-code-from test-runner
+        run: docker compose run --rm --build test-runner   # exit code = el de pytest (up --exit-code-from aborta si infra-init termina primero)
       - name: Flujo asíncrono E2E (API -> S3 + SQS -> worker)
         run: |
           docker compose up -d --wait api notificador

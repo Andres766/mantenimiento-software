@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import signal
+import time
 
 import requests
 from botocore.exceptions import BotoCoreError, ClientError
@@ -56,7 +57,11 @@ def main() -> None:  # pragma: no cover - bucle infinito, se prueba procesar_lot
     signal.signal(signal.SIGTERM, lambda *_: activo.update(si=False))
     log.info(json.dumps({"evento": "worker_iniciado", "cola": storage.COLA}))
     while activo["si"]:
-        procesar_lote()
+        try:
+            procesar_lote()
+        except (BotoCoreError, ClientError) as error:   # cola caída o aún arrancando: esperar, no morir
+            log.warning(json.dumps({"evento": "cola_no_disponible", "detalle": str(error)}))
+            time.sleep(2)
 
 
 if __name__ == "__main__":  # pragma: no cover
