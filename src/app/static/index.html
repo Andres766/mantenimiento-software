@@ -4,73 +4,285 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>NotasQA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap">
   <style>
-    :root { --tinta: #1d2433; --suave: #5b6476; --borde: #d6dae3; --acento: #1f5fbf; --ok: #1e7a46; --mal: #b3261e; }
+    :root {
+      --papel: #f1f3f7; --superficie: #ffffff; --tinta: #17202e; --suave: #566072; --tenue: #7a8292;
+      --linea: #dce1e9; --linea-fuerte: #c2c9d5;
+      --acento: #1d4580; --acento-hondo: #15345f; --acento-velo: #e7edf6;
+      --reprobado: #9a2b20; --reprobado-velo: #f7e7e3;
+      --aprobado: #23466f; --aprobado-velo: #e5ecf5;
+      --excelente: #1b6340; --excelente-velo: #e2f0e7;
+      --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+      --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+      --radio: 8px;
+      --sombra: 0 1px 2px rgba(23, 32, 46, .06), 0 8px 24px -12px rgba(23, 32, 46, .18);
+    }
     * { box-sizing: border-box; }
-    body { margin: 0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--tinta); background: #f6f7f9; }
-    header { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; background: #fff; border-bottom: 1px solid var(--borde); }
-    header h1 { margin: 0; font-size: 18px; }
-    main { max-width: 920px; margin: 24px auto; padding: 0 16px; display: grid; gap: 16px; }
-    section { background: #fff; border: 1px solid var(--borde); border-radius: 10px; padding: 18px 20px; }
-    h2 { margin: 0 0 12px; font-size: 16px; }
-    form { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px 12px; align-items: end; }
-    label { display: grid; gap: 4px; font-size: 13px; color: var(--suave); }
-    input { width: 100%; min-width: 0; font: inherit; padding: 7px 9px; border: 1px solid var(--borde); border-radius: 6px; color: var(--tinta); }
-    button { font: inherit; padding: 8px 14px; border: 0; border-radius: 6px; background: var(--acento); color: #fff; cursor: pointer; }
-    button.secundario { background: transparent; color: var(--acento); border: 1px solid var(--acento); }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--borde); }
-    th { color: var(--suave); font-weight: 600; }
-    td.num { font-variant-numeric: tabular-nums; }
-    .EXCELENTE { color: var(--ok); font-weight: 600; } .REPROBADO { color: var(--mal); font-weight: 600; }
-    #mensaje:empty { display: none; }
-    #mensaje { padding: 10px 14px; border-radius: 6px; background: #eef3fb; }
-    #mensaje.error { background: #fbeeee; color: var(--mal); }
+    html { scrollbar-color: var(--linea-fuerte) transparent; }
+    body { margin: 0; min-height: 100vh; font: 15px/1.55 var(--sans); color: var(--tinta); background: var(--papel);
+           caret-color: var(--acento); accent-color: var(--acento); -webkit-font-smoothing: antialiased; }
+    ::selection { background: #cddbee; color: var(--tinta); }
     [hidden] { display: none !important; }
+    h1, h2, h3 { font-family: var(--serif); font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .oculto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+    /* Barra superior */
+    .barra { background: var(--superficie); border-bottom: 1px solid var(--linea); }
+    .barra-interior { max-width: 1280px; margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .marca { display: flex; align-items: baseline; gap: 14px; min-width: 0; }
+    .marca h1 { font-size: 24px; color: var(--acento-hondo); }
+    .lema { color: var(--suave); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sesion { display: flex; align-items: center; gap: 12px; }
+    #quien:not(:empty) { font-weight: 500; padding: 4px 12px; border-radius: 999px; background: var(--acento-velo); color: var(--acento-hondo); font-size: 14px; }
+
+    main { max-width: 1280px; margin: 0 auto; padding: 28px 24px 56px; }
+    #mensaje { display: block; margin: 0 0 20px; padding: 11px 16px; border-radius: var(--radio); background: var(--acento-velo);
+               color: var(--acento-hondo); border: 1px solid #c9d7ea; font-weight: 500; }
+    #mensaje:empty { display: none; }
+    #mensaje.error { background: var(--reprobado-velo); color: var(--reprobado); border-color: #ebc9c2; }
+
+    /* Controles */
+    label { display: grid; gap: 5px; font-size: 13px; font-weight: 500; color: var(--suave); }
+    input { width: 100%; min-width: 0; font: 15px/1.4 var(--sans); padding: 9px 11px; color: var(--tinta); background: var(--superficie);
+            border: 1px solid var(--linea-fuerte); border-radius: 6px; transition: border-color .15s, box-shadow .15s; }
+    input:hover { border-color: var(--suave); }
+    input:focus { outline: none; border-color: var(--acento); box-shadow: 0 0 0 3px rgba(29, 69, 128, .16); }
+    input::placeholder { color: var(--tenue); }
+    button { font: 500 15px/1.2 var(--sans); padding: 10px 16px; border: 1px solid transparent; border-radius: 6px; cursor: pointer;
+             background: var(--acento); color: #fff; transition: background .15s, border-color .15s, color .15s; }
+    button:hover { background: var(--acento-hondo); }
+    button:focus-visible, .filtro:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+    button:disabled { opacity: .55; cursor: progress; }
+    .boton-sutil { background: transparent; color: var(--acento); border-color: var(--linea-fuerte); }
+    .boton-sutil:hover { background: var(--acento-velo); border-color: var(--acento); }
+    .boton-fila { font-size: 13px; padding: 6px 10px; background: transparent; color: var(--acento); border-color: var(--linea); }
+    .boton-fila:hover { background: var(--acento-velo); border-color: var(--acento); }
+
+    .tarjeta { background: var(--superficie); border: 1px solid var(--linea); border-radius: 12px; box-shadow: var(--sombra); }
+
+    /* Acceso */
+    .acceso { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(300px, .85fr); gap: 48px; align-items: center;
+              min-height: calc(100vh - 190px); padding-bottom: 40px; }
+    .regla h2 { font-size: 36px; line-height: 1.15; max-width: 21ch; text-wrap: balance; }
+    .regla > p { color: var(--suave); max-width: 52ch; margin: 14px 0 28px; font-size: 16px; }
+    .formula { font-family: var(--serif); font-size: 21px; margin: 0 0 6px; }
+    .formula b { color: var(--acento-hondo); font-weight: 600; }
+    .nota-pie { color: var(--suave); font-size: 14px; margin: 0 0 28px; }
+    .bandas { display: grid; grid-template-columns: 60fr 32fr 8fr; gap: 3px; height: 12px; }
+    .bandas span:nth-child(1) { background: var(--reprobado-velo); border: 1px solid #e6c6bf; border-radius: 6px 0 0 6px; }
+    .bandas span:nth-child(2) { background: var(--aprobado-velo); border: 1px solid #c4d3e6; }
+    .bandas span:nth-child(3) { background: var(--excelente-velo); border: 1px solid #bcdcc8; border-radius: 0 6px 6px 0; }
+    .leyenda { display: grid; grid-template-columns: 60fr 32fr 8fr; gap: 3px; margin-top: 10px; font-size: 13px; }
+    .leyenda div { display: grid; gap: 2px; }
+    .leyenda b { font-weight: 600; letter-spacing: .04em; font-size: 12px; }
+    .leyenda span { color: var(--suave); white-space: nowrap; }
+    .leyenda div:nth-child(1) b { color: var(--reprobado); } .leyenda div:nth-child(2) b { color: var(--aprobado); }
+    .leyenda div:nth-child(3) { justify-self: end; text-align: right; } .leyenda div:nth-child(3) b { color: var(--excelente); }
+    #form-login { padding: 28px; display: grid; gap: 16px; }
+    #form-login h2 { font-size: 22px; }
+    #form-login p { margin: -8px 0 4px; color: var(--suave); font-size: 14px; }
+    #form-login button { padding: 12px 16px; margin-top: 4px; }
+
+    /* Aplicación */
+    .app { display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 24px; align-items: start; }
+    .app.sin-registro { grid-template-columns: minmax(0, 1fr); }
+    .columna { display: grid; gap: 24px; min-width: 0; }
+    .columna > * { min-width: 0; }
+    #panel-registro { position: sticky; top: 20px; padding: 22px; }
+    #panel-registro h2, #panel-resumen h2, #panel-notas h2 { font-size: 20px; }
+    #form-nota { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px 12px; margin-top: 18px; }
+    #form-nota .ancho-4 { grid-column: span 4; } #form-nota .ancho-2 { grid-column: span 2; } #form-nota .ancho-6 { grid-column: span 6; }
+    #form-nota button { grid-column: span 6; padding: 12px 16px; }
+
+    .vista-previa { grid-column: span 6; border: 1px solid var(--linea); border-radius: var(--radio); padding: 14px 16px 16px; background: #f7f8fb; }
+    .vista-previa .fila { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+    .rotulo { font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--suave); }
+    .cifra { font: 600 40px/1 var(--serif); font-variant-numeric: tabular-nums; color: var(--tinta); }
+    .cifra.vacia { color: var(--linea-fuerte); }
+    .aviso-previa { margin: 10px 0 0; font-size: 13px; color: var(--suave); }
+    .aviso-previa.alerta { color: var(--reprobado); }
+
+    .escala { position: relative; margin-top: 14px; }
+    .escala .bandas { height: 8px; }
+    .marcador { position: absolute; top: -5px; left: 0; width: 3px; height: 18px; border-radius: 2px; background: var(--tinta);
+                transform: translateX(-1px); transition: left .45s cubic-bezier(.16, 1, .3, 1), opacity .2s; }
+    .marcador.apagado { opacity: 0; }
+    .marcas { position: relative; height: 18px; margin-top: 6px; font-size: 11.5px; color: var(--tenue); }
+    .marcas span { position: absolute; transform: translateX(-50%); } .marcas span:first-child { transform: none; }
+
+    .estado { display: inline-block; font-size: 11.5px; font-weight: 600; letter-spacing: .06em; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+    .estado-REPROBADO { color: var(--reprobado); background: var(--reprobado-velo); }
+    .estado-APROBADO { color: var(--aprobado); background: var(--aprobado-velo); }
+    .estado-EXCELENTE { color: var(--excelente); background: var(--excelente-velo); }
+
+    /* Resumen */
+    #panel-resumen { padding: 22px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 28px; }
+    #panel-resumen .bloque { display: grid; gap: 12px; align-content: start; }
+    .promedio { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+    .promedio .cifra { font-size: 48px; }
+    .detalle { color: var(--suave); font-size: 14px; margin: 0; }
+    #form-promedio { display: flex; gap: 10px; align-items: end; }
+    #form-promedio label { flex: 1; }
+    .distribucion { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--papel); gap: 2px; }
+    .distribucion span { min-width: 0; transition: flex-grow .45s cubic-bezier(.16, 1, .3, 1); }
+    .d-REPROBADO { background: #c7766b; } .d-APROBADO { background: #6f8fb8; } .d-EXCELENTE { background: #5c9c79; }
+    .conteos { display: flex; gap: 18px; flex-wrap: wrap; margin: 0; padding: 0; list-style: none; font-size: 14px; color: var(--suave); }
+    .conteos b { font: 600 18px/1 var(--serif); color: var(--tinta); margin-right: 4px; font-variant-numeric: tabular-nums; }
+
+    /* Tabla */
+    #panel-notas { padding: 22px 0 8px; }
+    .encabezado-notas { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 0 22px; flex-wrap: wrap; }
+    #conteo { color: var(--suave); font-size: 14px; }
+    .herramientas { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; padding: 16px 22px; border-bottom: 1px solid var(--linea); }
+    .herramientas label { width: 240px; }
+    .filtros { display: flex; gap: 6px; flex-wrap: wrap; }
+    .filtro { font-size: 13px; padding: 8px 12px; background: transparent; color: var(--suave); border: 1px solid var(--linea); border-radius: 999px; }
+    .filtro:hover { background: var(--papel); color: var(--tinta); }
+    .filtro[aria-pressed="true"] { background: var(--tinta); color: #fff; border-color: var(--tinta); }
+    .marco-tabla { overflow-x: auto; }
+    table { width: 100%; min-width: 680px; border-collapse: collapse; font-size: 14px; }
+    th { text-align: left; font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--suave);
+         padding: 12px 10px; border-bottom: 1px solid var(--linea); white-space: nowrap; }
+    td { padding: 12px 10px; border-bottom: 1px solid #e7eaf0; vertical-align: middle; }
+    th:first-child, td:first-child { padding-left: 22px; } th:last-child, td:last-child { padding-right: 22px; }
+    tbody tr:hover { background: #f7f8fb; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    td.tenue { color: var(--tenue); }
+    td.cortes { color: var(--suave); white-space: nowrap; }
+    td.definitiva { font: 600 18px/1 var(--serif); }
+    td.definitiva small { display: block; margin-top: 4px; font: 500 11.5px/1 var(--sans); color: var(--suave); }
+    td.asignatura { min-width: 190px; max-width: 300px; overflow-wrap: break-word; }
+    td.acciones { white-space: nowrap; text-align: right; }
+    td.acciones > * + * { margin-left: 6px; }
+    .habilitar-en-linea { display: inline-flex; gap: 6px; align-items: center; }
+    .habilitar-en-linea input { width: 72px; padding: 6px 8px; font-size: 14px; }
+    td.vacio { text-align: center; color: var(--suave); padding: 40px 22px; }
+    .pie-tabla { display: flex; justify-content: center; padding: 14px 22px 8px; }
+
+    @media (max-width: 960px) {
+      .acceso, .app, #panel-resumen { grid-template-columns: minmax(0, 1fr); }
+      .acceso { min-height: 0; padding-top: 8px; gap: 32px; }
+      #form-login { order: -1; }
+      #panel-registro { position: static; }
+      .regla h2 { font-size: 28px; }
+    }
+    @media (max-width: 560px) {
+      .barra-interior, main { padding-left: 16px; padding-right: 16px; }
+      .lema { display: none; }
+      .herramientas label { width: 100%; }
+      #form-promedio { flex-wrap: wrap; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
   </style>
 </head>
 <body>
-  <header>
-    <h1>NotasQA</h1>
-    <div><span id="quien"></span> <button id="salir" class="secundario" hidden>Salir</button></div>
+  <header class="barra">
+    <div class="barra-interior">
+      <div class="marca"><h1>NotasQA</h1><span class="lema">Cortes 30 · 30 · 40 sobre 5.0</span></div>
+      <div class="sesion"><span id="quien"></span><button id="salir" class="boton-sutil" hidden>Salir</button></div>
+    </div>
   </header>
-  <main>
-    <p id="mensaje" role="status" aria-live="polite"></p>
 
-    <section id="panel-login">
-      <h2>Ingresar</h2>
-      <form id="form-login">
+  <main>
+    <output id="mensaje"></output>
+
+    <section id="panel-login" class="acceso">
+      <div class="regla">
+        <h2>La definitiva, calculada sin errores en la frontera</h2>
+        <p>Cada corte va de 0.0 a 5.0. La definitiva se redondea a un decimal con la mitad hacia arriba, con aritmética decimal exacta: 2.95 es 3.0 y aprueba.</p>
+        <p class="formula">Definitiva = <b>30 %</b> corte 1 + <b>30 %</b> corte 2 + <b>40 %</b> corte 3</p>
+        <p class="nota-pie">Con definitiva entre 2.0 y 2.9, la materia se puede habilitar una vez.</p>
+        <div class="bandas" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="leyenda">
+          <div><b>REPROBADO</b><span>0.0 a 2.9</span></div>
+          <div><b>APROBADO</b><span>3.0 a 4.5</span></div>
+          <div><b>EXCELENTE</b><span>4.6 a 5.0</span></div>
+        </div>
+      </div>
+      <form id="form-login" class="tarjeta">
+        <h2>Ingresar</h2>
+        <p>Docentes registran notas; estudiantes consultan las suyas.</p>
         <label>Usuario <input name="usuario" autocomplete="username" required></label>
         <label>Clave <input name="clave" type="password" autocomplete="current-password" required></label>
         <button type="submit">Ingresar</button>
       </form>
     </section>
 
-    <section id="panel-registro" hidden>
-      <h2>Registrar nota</h2>
-      <form id="form-nota">
-        <label>Estudiante <input name="estudiante_id" type="number" min="1" required></label>
-        <label>Asignatura <input name="asignatura" required></label>
-        <label>Corte 1 <input name="corte1" type="number" step="0.1" required></label>
-        <label>Corte 2 <input name="corte2" type="number" step="0.1" required></label>
-        <label>Corte 3 <input name="corte3" type="number" step="0.1" required></label>
-        <label>Créditos <input name="creditos" type="number" value="3" required></label>
-        <button type="submit">Registrar nota</button>
-      </form>
-    </section>
+    <div id="vista-app" class="app" hidden>
+      <section id="panel-registro" class="tarjeta" hidden>
+        <h2>Registrar nota</h2>
+        <form id="form-nota">
+          <label class="ancho-4">Estudiante <input name="estudiante_id" type="number" min="1" inputmode="numeric" placeholder="Ej. 1001" required></label>
+          <label class="ancho-2">Créditos <input name="creditos" type="number" value="3" inputmode="numeric" required></label>
+          <label class="ancho-6">Asignatura <input name="asignatura" placeholder="Ej. Pruebas de software" required></label>
+          <label class="ancho-2">Corte 1 <input name="corte1" type="number" step="0.1" inputmode="decimal" placeholder="30 %" required></label>
+          <label class="ancho-2">Corte 2 <input name="corte2" type="number" step="0.1" inputmode="decimal" placeholder="30 %" required></label>
+          <label class="ancho-2">Corte 3 <input name="corte3" type="number" step="0.1" inputmode="decimal" placeholder="40 %" required></label>
+          <div class="vista-previa" aria-live="polite">
+            <div class="fila">
+              <span class="rotulo">Definitiva estimada</span>
+              <span id="previa-estado"></span>
+            </div>
+            <div id="previa-cifra" class="cifra vacia">—</div>
+            <div class="escala" aria-hidden="true">
+              <div class="bandas"><span></span><span></span><span></span></div>
+              <span id="previa-marcador" class="marcador apagado"></span>
+              <div class="marcas"><span style="left:0">0.0</span><span style="left:60%">3.0</span><span style="left:92%">4.6</span></div>
+            </div>
+            <p id="previa-aviso" class="aviso-previa">Escribe los tres cortes. El servidor confirma al guardar.</p>
+          </div>
+          <button type="submit">Registrar nota</button>
+        </form>
+      </section>
 
-    <section id="panel-notas" hidden>
-      <h2 id="titulo-notas">Calificaciones</h2>
-      <table aria-labelledby="titulo-notas">
-        <thead><tr><th>#</th><th>Estudiante</th><th>Asignatura</th><th>Créditos</th><th>Definitiva</th><th>Estado</th></tr></thead>
-        <tbody id="tabla-notas"></tbody>
-      </table>
-    </section>
+      <div class="columna">
+        <section id="panel-resumen" class="tarjeta">
+          <div class="bloque" id="resumen-promedio"></div>
+          <div class="bloque">
+            <span class="rotulo" id="rotulo-distribucion">Distribución</span>
+            <div class="distribucion" id="distribucion" aria-hidden="true"></div>
+            <ul class="conteos" id="conteos"></ul>
+          </div>
+        </section>
+
+        <section id="panel-notas" class="tarjeta">
+          <div class="encabezado-notas">
+            <h2 id="titulo-notas">Calificaciones</h2>
+            <span id="conteo"></span>
+          </div>
+          <div class="herramientas">
+            <label>Buscar <input id="buscar" type="search" placeholder="Asignatura o código"></label>
+            <div class="filtros" role="group" aria-label="Filtrar por estado">
+              <button type="button" class="filtro" data-estado="" aria-pressed="true">Todas</button>
+              <button type="button" class="filtro" data-estado="REPROBADO" aria-pressed="false">Reprobadas</button>
+              <button type="button" class="filtro" data-estado="APROBADO" aria-pressed="false">Aprobadas</button>
+              <button type="button" class="filtro" data-estado="EXCELENTE" aria-pressed="false">Excelentes</button>
+            </div>
+          </div>
+          <div class="marco-tabla">
+            <table aria-labelledby="titulo-notas">
+              <thead><tr id="cabecera-notas"></tr></thead>
+              <tbody id="tabla-notas"></tbody>
+            </table>
+          </div>
+          <div class="pie-tabla"><button id="cargar-mas" class="boton-sutil" type="button" hidden>Cargar más</button></div>
+        </section>
+      </div>
+    </div>
   </main>
 
   <script>
     const API = "/api/v1";
+    const LIMITE = 100;
+    const ESTADOS = ["REPROBADO", "APROBADO", "EXCELENTE"];
+    const NOMBRES = { REPROBADO: ["reprobada", "reprobadas"], APROBADO: ["aprobada", "aprobadas"], EXCELENTE: ["excelente", "excelentes"] };
     let sesion = null;   // en memoria: se pierde al recargar (no se guarda el token en el navegador)
+    let notas = [];
+    let filtroEstado = "";
     const $ = (id) => document.getElementById(id);
 
     function mostrar(texto, esError = false) {
@@ -84,37 +296,258 @@
         headers: { "Content-Type": "application/json", ...(sesion ? { Authorization: "Bearer " + sesion.token } : {}) },
       });
       const cuerpo = await respuesta.json().catch(() => ({}));
-      if (!respuesta.ok) throw new Error(cuerpo.detail ? String(cuerpo.detail) : "Error " + respuesta.status);
+      if (!respuesta.ok) {
+        const detalle = Array.isArray(cuerpo.detail) ? cuerpo.detail.map((d) => d.msg).join("; ") : cuerpo.detail;
+        throw new Error(detalle ? String(detalle) : "Error " + respuesta.status);
+      }
       return cuerpo;
     }
 
-    function pintarTabla(notas) {
+    // Todo texto que viene de la API se pinta con textContent: nunca se interpreta como HTML (sin XSS)
+    function el(etiqueta, texto, clase) {
+      const nodo = document.createElement(etiqueta);
+      if (texto !== undefined && texto !== null) nodo.textContent = texto;
+      if (clase) nodo.className = clase;
+      return nodo;
+    }
+    const insignia = (estado) => el("span", estado, "estado estado-" + estado);
+    const unDecimal = (valor) => Number(valor).toFixed(1);
+
+    // ---------- Vista previa: aritmética entera (centésimas), sin float, igual que Decimal en el servidor ----------
+    function definitivaExacta(c1, c2, c3) {
+      const cortes = [c1, c2, c3];
+      if (cortes.some((c) => c === "" || Number.isNaN(Number(c)))) return null;
+      const valores = cortes.map(Number);
+      if (valores.some((v) => v < 0 || v > 5)) return { fuera: true };
+      const [a, b, c] = valores.map((v) => Math.round(v * 100));
+      const decimas = Math.floor((30 * a + 30 * b + 40 * c + 500) / 1000);   // mitad hacia arriba
+      const estado = decimas < 30 ? "REPROBADO" : decimas < 46 ? "APROBADO" : "EXCELENTE";
+      return { valor: decimas / 10, estado };
+    }
+
+    function pintarEscala(marcador, valor) {
+      marcador.classList.toggle("apagado", valor === null);
+      if (valor !== null) marcador.style.left = (valor / 5 * 100) + "%";
+    }
+
+    function actualizarPrevia() {
+      const f = new FormData($("form-nota"));
+      const r = definitivaExacta(f.get("corte1"), f.get("corte2"), f.get("corte3"));
+      const cifra = $("previa-cifra"), aviso = $("previa-aviso");
+      $("previa-estado").replaceChildren();
+      aviso.classList.remove("alerta");
+      if (!r || r.fuera) {
+        cifra.textContent = "—";
+        cifra.className = "cifra vacia";
+        aviso.textContent = r ? "Cada corte debe estar entre 0.0 y 5.0." : "Escribe los tres cortes. El servidor confirma al guardar.";
+        aviso.classList.toggle("alerta", Boolean(r));
+        pintarEscala($("previa-marcador"), null);
+        return;
+      }
+      cifra.textContent = unDecimal(r.valor);
+      cifra.className = "cifra";
+      $("previa-estado").append(insignia(r.estado));
+      aviso.textContent = r.estado === "REPROBADO" && r.valor >= 2
+        ? "Podrá habilitarse: queda entre 2.0 y 2.9." : "El servidor confirma al guardar.";
+      pintarEscala($("previa-marcador"), r.valor);
+    }
+
+    // ---------- Tabla ----------
+    const esDocente = () => sesion && sesion.rol === "docente";
+    const puedeHabilitar = (n) => n.habilitacion === null && n.definitiva >= 2 && n.definitiva < 3;
+
+    function pintarCabecera() {
+      const columnas = [["Estudiante", "num"], ["Asignatura", ""], ["Créd.", "num"], ["Cortes", ""],
+                        ["Definitiva", "num"], ["Estado", ""]];
+      if (esDocente()) columnas.push(["Acciones", "num"]);
+      $("cabecera-notas").replaceChildren(...columnas.map(([texto, clase]) => {
+        const th = el("th", texto, clase);
+        th.scope = "col";
+        return th;
+      }));
+    }
+
+    function filaDe(n) {
+      const fila = document.createElement("tr");
+      const definitiva = el("td", unDecimal(n.definitiva), "num definitiva");
+      if (n.habilitacion !== null) definitiva.append(el("small", "hab. " + unDecimal(n.habilitacion)));
+      const estado = el("td");
+      estado.append(insignia(n.estado));
+      fila.append(el("td", n.estudiante_id, "num"), el("td", n.asignatura, "asignatura"),
+                  el("td", n.creditos, "num"), el("td", [n.corte1, n.corte2, n.corte3].map(unDecimal).join(" · "), "cortes num"),
+                  definitiva, estado);
+      if (esDocente()) fila.append(accionesDe(n));
+      return fila;
+    }
+
+    function accionesDe(n) {
+      const celda = el("td", null, "acciones");
+      if (puedeHabilitar(n)) {
+        const habilitar = el("button", "Habilitar", "boton-fila");
+        habilitar.type = "button";
+        habilitar.addEventListener("click", () => abrirHabilitacion(celda, n));
+        celda.append(habilitar);
+      }
+      const boletin = el("button", "Boletín", "boton-fila");
+      boletin.type = "button";
+      boletin.addEventListener("click", () => generarBoletin(boletin, n));
+      celda.append(boletin);
+      return celda;
+    }
+
+    function abrirHabilitacion(celda, n) {
+      const formulario = el("form", null, "habilitar-en-linea");
+      const etiqueta = el("label", null);
+      etiqueta.append(el("span", "Nota de habilitación de la nota " + n.id, "oculto"));
+      const entrada = document.createElement("input");
+      Object.assign(entrada, { type: "number", step: "0.1", required: true, placeholder: "0.0" });
+      etiqueta.append(entrada);
+      const guardar = el("button", "Guardar", "boton-fila");
+      const cancelar = el("button", "Cancelar", "boton-fila");
+      cancelar.type = "button";
+      cancelar.addEventListener("click", pintar);
+      formulario.append(etiqueta, guardar, cancelar);
+      formulario.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        guardar.disabled = true;
+        try {
+          const nota = await llamar(`/calificaciones/${n.id}/habilitacion`, { method: "POST",
+            body: JSON.stringify({ nota: Number(entrada.value) }) });
+          mostrar(`Habilitación registrada: ${unDecimal(nota.definitiva)} ${nota.estado}`);
+          await refrescar();
+        } catch (error) { mostrar(error.message, true); guardar.disabled = false; }
+      });
+      celda.replaceChildren(formulario);
+      entrada.focus();
+    }
+
+    async function generarBoletin(boton, n) {
+      boton.disabled = true;
+      boton.textContent = "Generando…";
+      try {
+        const r = await llamar(`/calificaciones/${n.id}/boletin`, { method: "POST" });
+        mostrar(`Boletín generado: ${r.s3_key}`);
+      } catch (error) { mostrar(error.message, true); }
+      boton.disabled = false;
+      boton.textContent = "Boletín";
+    }
+
+    function visibles() {
+      const texto = $("buscar").value.trim().toLowerCase();
+      return notas.filter((n) => (!filtroEstado || n.estado === filtroEstado) &&
+        (!texto || n.asignatura.toLowerCase().includes(texto) || String(n.estudiante_id).startsWith(texto)));
+    }
+
+    function pintar() {
+      const lista = visibles();
       const tbody = $("tabla-notas");
-      tbody.replaceChildren();
-      for (const n of notas) {
+      tbody.replaceChildren(...lista.map(filaDe));
+      if (!lista.length) {
         const fila = document.createElement("tr");
-        for (const [valor, clase] of [[n.id, "num"], [n.estudiante_id, "num"], [n.asignatura, ""],
-                                      [n.creditos, "num"], [n.definitiva.toFixed(1), "num"], [n.estado, n.estado]]) {
-          const celda = document.createElement("td");
-          celda.textContent = valor;        // textContent: nunca se interpreta como HTML (sin XSS)
-          if (clase) celda.className = clase;
-          fila.append(celda);
-        }
+        const vacio = el("td", notas.length ? "Ninguna nota coincide con el filtro."
+          : esDocente() ? "Todavía no hay notas. Registra la primera con el formulario." : "Aún no tienes notas registradas.", "vacio");
+        vacio.colSpan = esDocente() ? 7 : 6;
+        fila.append(vacio);
         tbody.append(fila);
       }
+      $("conteo").textContent = lista.length === notas.length ? `${notas.length} ${notas.length === 1 ? "nota" : "notas"}`
+        : `${lista.length} de ${notas.length}`;
+      pintarDistribucion();
+    }
+
+    function pintarDistribucion() {
+      const total = notas.length;
+      $("rotulo-distribucion").textContent = esDocente() ? `Distribución de ${total} ${total === 1 ? "nota" : "notas"}` : "Tus materias por estado";
+      $("distribucion").replaceChildren(...ESTADOS.map((estado) => {
+        const parte = el("span", null, "d-" + estado);
+        parte.style.flexGrow = notas.filter((n) => n.estado === estado).length;
+        return parte;
+      }));
+      $("conteos").replaceChildren(...ESTADOS.map((estado) => {
+        const item = el("li");
+        const cantidad = notas.filter((n) => n.estado === estado).length;
+        item.append(el("b", cantidad), NOMBRES[estado][cantidad === 1 ? 0 : 1]);
+        return item;
+      }));
     }
 
     async function refrescar() {
-      pintarTabla(await llamar("/calificaciones"));
+      notas = await llamar(`/calificaciones?limite=${LIMITE}`);
+      $("cargar-mas").hidden = notas.length < LIMITE;
+      pintar();
+      if (!esDocente()) await pintarMiPromedio();
     }
 
+    $("cargar-mas").addEventListener("click", async () => {
+      const mas = await llamar(`/calificaciones?limite=${LIMITE}&desde=${notas.length}`);
+      notas = notas.concat(mas);
+      $("cargar-mas").hidden = mas.length < LIMITE;
+      pintar();
+    });
+
+    $("buscar").addEventListener("input", pintar);
+    for (const boton of document.querySelectorAll(".filtro")) {
+      boton.addEventListener("click", () => {
+        filtroEstado = boton.dataset.estado;
+        for (const b of document.querySelectorAll(".filtro")) b.setAttribute("aria-pressed", String(b === boton));
+        pintar();
+      });
+    }
+
+    // ---------- Promedio ponderado por créditos ----------
+    function bloquePromedio(titulo, datos, vacio) {
+      const bloque = $("resumen-promedio");
+      bloque.replaceChildren(el("h2", titulo));
+      if (!datos) { bloque.append(el("p", vacio, "detalle")); return; }
+      const linea = el("div", null, "promedio");
+      linea.append(el("span", datos.promedio.toFixed(2), "cifra"));
+      bloque.append(linea, el("p", `${datos.materias} ${datos.materias === 1 ? "materia" : "materias"} · ${datos.creditos} créditos · ponderado por créditos`, "detalle"));
+    }
+
+    async function pintarMiPromedio() {
+      try {
+        bloquePromedio("Tu promedio", await llamar(`/estudiantes/${sesion.estudiante_id}/promedio`));
+      } catch {
+        bloquePromedio("Tu promedio", null, "Aparecerá cuando tengas tu primera nota.");
+      }
+    }
+
+    function formularioPromedio() {
+      const bloque = $("resumen-promedio");
+      bloque.replaceChildren(el("h2", "Promedio por créditos"));
+      const formulario = el("form");
+      formulario.id = "form-promedio";
+      const etiqueta = el("label", "Código");
+      const entrada = document.createElement("input");
+      Object.assign(entrada, { type: "number", min: 1, required: true, placeholder: "Ej. 1001", inputMode: "numeric" });
+      etiqueta.append(entrada);
+      const consultar = el("button", "Consultar", "boton-sutil");
+      formulario.append(etiqueta, consultar);
+      const resultado = el("div");
+      formulario.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        resultado.replaceChildren();
+        try {
+          const datos = await llamar(`/estudiantes/${Number(entrada.value)}/promedio`);
+          const linea = el("div", null, "promedio");
+          linea.append(el("span", datos.promedio.toFixed(2), "cifra"));
+          resultado.append(linea, el("p", `Código ${datos.estudiante_id} · ${datos.materias} ${datos.materias === 1 ? "materia" : "materias"} · ${datos.creditos} créditos`, "detalle"));
+        } catch (error) { resultado.append(el("p", error.message, "detalle")); }
+      });
+      bloque.append(formulario, resultado);
+    }
+
+    // ---------- Sesión ----------
     function entrarComo(datos) {
-      sesion = { token: datos.access_token, rol: datos.rol };
+      sesion = { token: datos.access_token, rol: datos.rol, estudiante_id: datos.estudiante_id };
       $("quien").textContent = datos.rol === "docente" ? "Docente" : "Estudiante " + datos.estudiante_id;
       $("panel-login").hidden = true;
       $("salir").hidden = false;
-      $("panel-notas").hidden = false;
-      $("panel-registro").hidden = datos.rol !== "docente";
+      $("vista-app").hidden = false;
+      $("panel-registro").hidden = !esDocente();
+      $("vista-app").classList.toggle("sin-registro", !esDocente());
+      pintarCabecera();
+      if (esDocente()) formularioPromedio();
     }
 
     $("form-login").addEventListener("submit", async (e) => {
@@ -124,10 +557,12 @@
         entrarComo(await llamar("/auth/token", { method: "POST",
           body: JSON.stringify({ usuario: f.get("usuario"), clave: f.get("clave") }) }));
         mostrar("");
+        e.target.reset();
         await refrescar();
       } catch (error) { mostrar(error.message, true); }
     });
 
+    $("form-nota").addEventListener("input", actualizarPrevia);
     $("form-nota").addEventListener("submit", async (e) => {
       e.preventDefault();
       const f = new FormData(e.target);
@@ -136,20 +571,22 @@
         creditos: Number(f.get("creditos")) };
       try {
         const nota = await llamar("/calificaciones", { method: "POST", body: JSON.stringify(cuerpo) });
-        mostrar(`Nota registrada: ${nota.definitiva.toFixed(1)} ${nota.estado}`);
+        mostrar(`Nota registrada: ${unDecimal(nota.definitiva)} ${nota.estado}`);
         e.target.reset();
+        actualizarPrevia();
         await refrescar();
       } catch (error) { mostrar(error.message, true); }
     });
 
     $("salir").addEventListener("click", () => {
       sesion = null;
+      notas = [];
       $("quien").textContent = "";
       $("salir").hidden = true;
       $("panel-login").hidden = false;
-      $("panel-registro").hidden = true;
-      $("panel-notas").hidden = true;
+      $("vista-app").hidden = true;
       $("tabla-notas").replaceChildren();
+      $("buscar").value = "";
       mostrar("Sesión cerrada");
     });
   </script>

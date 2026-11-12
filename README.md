@@ -62,7 +62,7 @@ Reglas de trabajo, ramas y revisiones: [CONTRIBUTING.md](CONTRIBUTING.md).
 python -m venv venv
 # Windows: .\venv\Scripts\activate      Linux/Mac: source venv/bin/activate
 python -m pip install -r requirements-dev.txt
-python -m pytest                                  # 101 pruebas (unit 56 · api 32 · integración 13), cobertura ≈ 95 %
+python -m pytest                                  # 102 pruebas (unit 56 · api 33 · integración 13), cobertura ≈ 95 %
 python -m pytest --cov-report=html                # abrir htmlcov/index.html
 python -m playwright install chromium             # una sola vez
 python -m pytest -m e2e --no-cov tests/e2e        # 6 pruebas E2E (agregar --headed para ver el navegador)
@@ -91,7 +91,7 @@ docker compose down -v                                     # destruir todo (BD y
 | `POST /api/v1/auth/token` | público | 200 con token · 401 |
 | `GET /health` · `GET /metrics` · `GET /ui/` | público | 200 (`/health` 500 si `FORZAR_FALLO=1`) |
 | `POST /api/v1/calificaciones` | docente | 201 · 400 (nota o créditos fuera de rango) · 401 · 403 |
-| `GET /api/v1/calificaciones?limite=100&desde=0` | ambos | 200, paginado (el estudiante solo ve las suyas) · 422 si `limite` no está entre 1 y 500 |
+| `GET /api/v1/calificaciones?limite=100&desde=0` | ambos | 200, paginado y con las más recientes primero (el estudiante solo ve las suyas) · 422 si `limite` no está entre 1 y 500 |
 | `GET /api/v1/calificaciones/{id}` | ambos | 200 · 403 (ajena) · 404 |
 | `POST /api/v1/calificaciones/{id}/habilitacion` | docente | 200 · 400 · 409 (no habilitable o ya habilitada) |
 | `GET /api/v1/estudiantes/{id}/promedio` | ambos | 200 · 403 (ajeno) · 404 |

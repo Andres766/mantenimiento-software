@@ -129,8 +129,9 @@ def crear_calificacion(datos: CalificacionIn, db: Session = Depends(get_db),
 @app.get("/api/v1/calificaciones")
 def listar_calificaciones(db: Session = Depends(get_db), usuario: Usuario = Depends(usuario_actual),
                           limite: int = Query(100, ge=1, le=500), desde: int = Query(0, ge=0)):
-    # Paginado: sin límite, la respuesta crecía con cada nota y a 200 usuarios saturaba la CPU
-    consulta = select(Calificacion).order_by(Calificacion.id).offset(desde).limit(limite)
+    # Paginado: sin límite, la respuesta crecía con cada nota y a 200 usuarios saturaba la CPU.
+    # Las más recientes primero: la nota recién registrada siempre está en la primera página.
+    consulta = select(Calificacion).order_by(Calificacion.id.desc()).offset(desde).limit(limite)
     if usuario.rol == "estudiante":
         consulta = consulta.where(Calificacion.estudiante_id == usuario.estudiante_id)
     return [c.a_dict() for c in db.scalars(consulta)]

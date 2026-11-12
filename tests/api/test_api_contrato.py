@@ -56,6 +56,12 @@ def test_listar_esta_paginado(client, docente):
     assert pagina1[1]["id"] == pagina2[0]["id"]              # desde=1 empieza en el segundo
 
 
+def test_listar_muestra_primero_la_mas_reciente(client, docente):
+    creada = client.post("/api/v1/calificaciones", json=VALIDA, headers=docente).json()
+    primera = client.get("/api/v1/calificaciones?limite=1", headers=docente).json()
+    assert primera[0]["id"] == creada["id"]
+
+
 def test_limite_fuera_de_rango_422(client, docente):
     assert client.get("/api/v1/calificaciones?limite=0", headers=docente).status_code == 422
     assert client.get("/api/v1/calificaciones?limite=501", headers=docente).status_code == 422
