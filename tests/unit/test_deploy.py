@@ -42,9 +42,35 @@ def test_telegram_usa_secretos_de_entorno(monkeypatch):
     enviado = {}
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "t")
     monkeypatch.setenv("TELEGRAM_CHAT_ID", "c")
-    monkeypatch.setattr(deploy.requests, "post", lambda url, **k: enviado.update(url=url, **k))
+
+    def post(url, **k):
+        enviado.update(url=url, **k)
+        return MagicMock(ok=True)
+    monkeypatch.setattr(deploy.requests, "post", post)
     assert deploy.main(["--notificar", "hola"]) == 0
     assert enviado["json"] == {"chat_id": "c", "text": "hola"} and "bott/" in enviado["url"]
+
+
+def test_telegram_ignora_espacios_al_pegar_secretos(monkeypatch):
+    enviado = {}
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", " t \n")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", " c ")
+
+    def post(url, **k):
+        enviado.update(url=url, **k)
+        return MagicMock(ok=True)
+    monkeypatch.setattr(deploy.requests, "post", post)
+    deploy.notificar_telegram("hola")
+    assert "/bott/sendMessage" in enviado["url"] and enviado["json"]["chat_id"] == "c"
+
+
+def test_telegram_rechazado_queda_como_advertencia(monkeypatch, capsys):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "malo")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "c")
+    rechazo = MagicMock(ok=False, status_code=401, text='{"ok":false,"description":"Unauthorized"}')
+    monkeypatch.setattr(deploy.requests, "post", lambda *a, **k: rechazo)
+    deploy.notificar_telegram("hola")      # no rompe el despliegue...
+    assert "::warning::Telegram rechazó el mensaje (401)" in capsys.readouterr().out   # ...pero se ve
 
 
 def test_telegram_caido_no_rompe_el_despliegue(monkeypatch):

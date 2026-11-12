@@ -14,16 +14,22 @@ VERSION = os.getenv("APP_VERSION", "dev")[:7]
 
 
 def notificar_telegram(mensaje: str) -> None:
-    token = os.getenv("TELEGRAM_BOT_TOKEN")  # siempre desde GitHub Secrets, nunca en el código
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    """Nunca rompe el despliegue, pero deja un ::warning:: visible en Actions si el aviso no sale."""
+    token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()  # siempre desde GitHub Secrets, nunca en el código
+    chat_id = os.getenv("TELEGRAM_CHAT_ID", "").strip()
     if not token or not chat_id:
-        print(f"(Telegram no configurado) {mensaje}")
+        print(f"::warning::Telegram no configurado (faltan secretos). Mensaje: {mensaje}")
         return
     try:
-        requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
-                      json={"chat_id": chat_id, "text": mensaje}, timeout=5)
+        respuesta = requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
+                                  json={"chat_id": chat_id, "text": mensaje}, timeout=5)
     except requests.RequestException as error:
-        print(f"No se pudo notificar: {error}")
+        print(f"::warning::No se pudo notificar a Telegram: {error}")
+        return
+    if respuesta.ok:
+        print(f"Telegram: mensaje enviado ({mensaje})")
+    else:                                   # 401 = token inválido, 400 = chat_id inválido
+        print(f"::warning::Telegram rechazó el mensaje ({respuesta.status_code}): {respuesta.text[:200]}")
 
 
 def smoke_test(base_url: str) -> bool:
