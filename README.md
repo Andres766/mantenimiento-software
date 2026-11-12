@@ -62,7 +62,7 @@ Reglas de trabajo, ramas y revisiones: [CONTRIBUTING.md](CONTRIBUTING.md).
 python -m venv venv
 # Windows: .\venv\Scripts\activate      Linux/Mac: source venv/bin/activate
 python -m pip install -r requirements-dev.txt
-python -m pytest                                  # 93 pruebas (unit 52 · api 30 · integración 11), cobertura ≈ 95 %
+python -m pytest                                  # 101 pruebas (unit 56 · api 32 · integración 13), cobertura ≈ 95 %
 python -m pytest --cov-report=html                # abrir htmlcov/index.html
 python -m playwright install chromium             # una sola vez
 python -m pytest -m e2e --no-cov tests/e2e        # 6 pruebas E2E (agregar --headed para ver el navegador)
@@ -136,6 +136,22 @@ Grafana en http://localhost:3000 → carpeta **NotasQA** (tablero ya provisionad
 Todas las acciones están fijadas por **SHA completo**. Caso real que lo justifica: en marzo de 2026 atacantes
 reescribieron 76 de 77 etiquetas de `aquasecurity/trivy-action` para robar secretos de los pipelines que las usaban
 por etiqueta (CVE-2026-33634); los pipelines fijados por SHA no ejecutaron el código malicioso.
+
+## Matriz de trazabilidad: semana → proyecto
+
+| Semana | Tema | Dónde se aplica | Evidencia |
+|---|---|---|---|
+| 1 | Error → defecto → fallo, pirámide, patrón AAA | `tests/unit/test_reglas.py::test_nota_aprobatoria_exacta_es_aprobado` | Cambiar `<` por `<=` y ver pruebas en rojo |
+| 2 | Partición de equivalencia, BVA, `parametrize`, `pytest.raises` | `test_clasificar_nota_fronteras`, `test_clasificar_nota_entradas_destructivas`, `test_calcular_definitiva_redondeo` | `pytest -v` con cada tupla visible |
+| 3 | Cobertura y Quality Gate `--cov-fail-under=80` | `pytest.ini` (ramas sobre `src`, `infra`, `scripts`) | 95 % en terminal + `htmlcov/index.html` |
+| 4 | Docker, imagen, contenedor, compose, exit code | `Dockerfile`, `docker-compose.yml` | `docker images` + test-runner con exit 0 |
+| 5 | Pruebas de API, JSON Schema, test-runner efímero | `tests/api/`, servicio `test-runner` (`API_URL=http://api:8000`) | 28 pruebas contra el contenedor |
+| 6 | CI con GitHub Actions | `.github/workflows/ci.yml` | Pestaña Actions con runs verdes y rojos |
+| 7 | SAST, SonarCloud, acciones fijadas por SHA | job `sonarcloud`, `sonar-project.properties` | Quality Gate en *Passed* |
+| 8 | Carga con Locust, p95, RPS, punto de quiebre | `load/locustfile.py` (docente : estudiante = 1 : 4) | CSV en artifacts, Charts con 200 usuarios |
+| 9 | CD, Staging, smoke test, rollback, Telegram | `cd.yml`, `rollback.yml`, `scripts/deploy.py` | CD verde, CD rojo y 3 mensajes en Telegram |
+| 10 | IaC idempotente con LocalStack (S3 + SQS) | `infra/init_infra.py`, servicios `localstack` e `infra-init` | Boletín en S3; `docker compose down -v` borra la "nube" |
+| 11–12 | Observabilidad | `/metrics`, logs JSON, `observabilidad/` (Prometheus + Grafana) | Tablero con RPS, p95 y 5xx durante Locust |
 
 ## Demos para la sustentación
 

@@ -28,7 +28,9 @@ def _sin_espera(sqs):
 
 
 def test_aprovisionar_es_idempotente(aws):
-    assert aprovisionar() == aprovisionar()
+    primera = aprovisionar()
+    segunda = aprovisionar()            # correrlo otra vez no crea ni cambia nada
+    assert segunda == primera
 
 
 def test_cola_tiene_politica_de_dlq(aws):

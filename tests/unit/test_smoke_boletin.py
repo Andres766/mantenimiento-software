@@ -61,3 +61,16 @@ def test_boletin_sin_llave_falla(monkeypatch):
         RespuestaFalsa(201, {}),
     ]))
     assert smoke_boletin.main("http://api") == 1
+
+
+def test_rechaza_destinos_fuera_del_proyecto(monkeypatch):
+    llamadas = []
+    monkeypatch.setattr(smoke_boletin.urllib.request, "urlopen", _servidor([], llamadas))
+    for base in ("http://evil.example.com", "file:///etc/passwd", "ftp://localhost"):
+        assert smoke_boletin.main(base) == 2
+    assert llamadas == []                    # no se hizo ninguna petición
+
+
+def test_normaliza_la_url_permitida():
+    assert smoke_boletin.validar_base("http://localhost:8000") == "http://localhost:8000"
+    assert smoke_boletin.validar_base("http://api") == "http://api:80"

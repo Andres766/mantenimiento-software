@@ -6,6 +6,19 @@ import json
 import os
 import sys
 import urllib.request
+from urllib.parse import urlsplit
+
+# Solo los destinos del proyecto: evita que el script se use para pedir URLs arbitrarias (SSRF)
+HOSTS_PERMITIDOS = {"localhost": "localhost", "127.0.0.1": "127.0.0.1", "api": "api"}
+
+
+def validar_base(base: str) -> str:
+    partes = urlsplit(base)
+    if partes.scheme not in ("http", "https") or partes.hostname not in HOSTS_PERMITIDOS:
+        raise ValueError(f"URL no permitida: {base} (hosts válidos: {', '.join(HOSTS_PERMITIDOS)})")
+    esquema = "https" if partes.scheme == "https" else "http"
+    puerto = int(partes.port or (443 if esquema == "https" else 80))
+    return f"{esquema}://{HOSTS_PERMITIDOS[partes.hostname]}:{puerto}"
 
 
 def post(url: str, cuerpo: dict | None = None, token: str | None = None) -> tuple[int, dict]:
@@ -19,6 +32,11 @@ def post(url: str, cuerpo: dict | None = None, token: str | None = None) -> tupl
 
 
 def main(base: str) -> int:
+    try:
+        base = validar_base(base)
+    except ValueError as error:
+        print(f"[ERROR] {error}")
+        return 2
     estado, sesion = post(f"{base}/api/v1/auth/token",
                           {"usuario": "docente", "clave": os.environ.get("DOCENTE_CLAVE", "")})
     print(f"[1/3] Login docente -> {estado}")
