@@ -17,6 +17,10 @@ log = logging.getLogger("notasqa.worker")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 
+def _json(datos: dict) -> str:
+    return json.dumps(datos, ensure_ascii=False)        # tildes legibles en `docker compose logs`
+
+
 def construir_mensaje(evento: dict) -> str:
     if evento.get("evento") != "boletin_generado":
         raise ValueError(f"Evento desconocido: {evento.get('evento')}")
@@ -31,7 +35,7 @@ def notificar(texto: str) -> None:
     if token and chat_id:
         requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
                       json={"chat_id": chat_id, "text": texto}, timeout=5).raise_for_status()
-    log.info(json.dumps({"evento": "notificacion", "texto": texto}))
+    log.info(_json({"evento": "notificacion", "texto": texto}))
 
 
 def procesar_lote(enviar=notificar, espera: int = 10) -> dict:
@@ -45,7 +49,7 @@ def procesar_lote(enviar=notificar, espera: int = 10) -> dict:
             enviar(construir_mensaje(json.loads(mensaje["Body"])))
         except (ValueError, KeyError, ClientError, BotoCoreError, requests.RequestException) as error:
             resultado["fallidos"] += 1
-            log.warning(json.dumps({"evento": "mensaje_fallido", "detalle": str(error)}))
+            log.warning(_json({"evento": "mensaje_fallido", "detalle": str(error)}))
             continue                           # sin borrar: se reintenta y luego va a la DLQ
         sqs.delete_message(QueueUrl=url, ReceiptHandle=mensaje["ReceiptHandle"])
         resultado["procesados"] += 1
@@ -55,12 +59,12 @@ def procesar_lote(enviar=notificar, espera: int = 10) -> dict:
 def main() -> None:  # pragma: no cover - bucle infinito, se prueba procesar_lote
     activo = {"si": True}
     signal.signal(signal.SIGTERM, lambda *_: activo.update(si=False))
-    log.info(json.dumps({"evento": "worker_iniciado", "cola": storage.COLA}))
+    log.info(_json({"evento": "worker_iniciado", "cola": storage.COLA}))
     while activo["si"]:
         try:
             procesar_lote()
         except (BotoCoreError, ClientError) as error:   # cola caída o aún arrancando: esperar, no morir
-            log.warning(json.dumps({"evento": "cola_no_disponible", "detalle": str(error)}))
+            log.warning(_json({"evento": "cola_no_disponible", "detalle": str(error)}))
             time.sleep(2)
 
 
